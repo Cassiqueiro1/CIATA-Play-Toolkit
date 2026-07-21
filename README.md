@@ -215,3 +215,25 @@ playtool tutorial --dry-run --json
 ```
 
 Ao retomar, referências locais são verificadas novamente. Arquivos removidos ou movidos invalidam as etapas relacionadas, evitando que um estado antigo seja tratado como válido.
+
+## Diagnóstico de prontidão
+
+Execute uma análise local antes de criar a edição na Google Play:
+
+```powershell
+playtool doctor
+```
+
+Para saída estruturada:
+
+```powershell
+playtool doctor --json
+```
+
+Para permitir apenas correções locais seguras e determinísticas:
+
+```powershell
+playtool doctor --fix
+```
+
+O comando não publica, não cria edição remota e não altera a Google Play.

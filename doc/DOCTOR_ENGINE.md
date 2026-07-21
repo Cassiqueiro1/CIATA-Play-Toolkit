@@ -72,3 +72,15 @@ Correções destrutivas ou ambíguas não devem ser automatizadas.
 - imagens;
 - contatos;
 - faixa de publicação.
+
+## Implementação inicial
+
+A versão 1.5.0 implementa o catálogo declarativo em `playtool/doctor.py` e disponibiliza:
+
+```powershell
+playtool doctor
+playtool doctor --json
+playtool doctor --fix
+```
+
+O modo `--fix` não realiza operações remotas. A primeira correção automática disponível cria um arquivo de configuração mínimo quando ele não existe. Alterações ambíguas, destrutivas ou relacionadas à publicação permanecem apenas como recomendações.

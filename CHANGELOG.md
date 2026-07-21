@@ -82,3 +82,12 @@ O formato segue a ideia de Keep a Changelog e o projeto usa versionamento semân
 - Contrato inicial de plugins.
 - Contexto central de publicação.
 - Diretrizes de relatórios e auditoria.
+
+## 1.5.0
+
+- Adiciona o comando `playtool doctor`.
+- Implementa catálogo declarativo de verificações.
+- Reutiliza o `PublishingContext` para diagnóstico local.
+- Verifica ambiente, configuração, pacote, faixa, idioma, credenciais, AAB, mapping, símbolos, textos, imagens, contatos, URL de revisão, Gradle e AndroidManifest.
+- Adiciona saída textual acessível e saída JSON.
+- Adiciona `--fix` somente para correções seguras e determinísticas.
