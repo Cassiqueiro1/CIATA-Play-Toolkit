@@ -1,0 +1,36 @@
+name: Relatar defeito
+description: Informe um comportamento incorreto ou uma barreira de acessibilidade
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: O que aconteceu?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão do toolkit
+  - type: input
+    id: environment
+    attributes:
+      label: Sistema, terminal e leitor de tela
+  - type: textarea
+    id: output
+    attributes:
+      label: Saída textual ou log sem dados sensíveis

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Relato privado de segurança
+    url: https://ciata.org.br
+    about: Não publique credenciais ou vulnerabilidades sensíveis em issues.

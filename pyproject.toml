@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ciata-play-publisher-toolkit"
+version = "1.2.0"
+description = "Toolkit acessível para preparar e publicar aplicativos na Google Play"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "Pillow>=10.0",
+  "PyYAML>=6.0",
+  "google-api-python-client>=2.0",
+  "google-auth>=2.0"
+]
+
+[project.scripts]
+playtool = "playtool.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["playtool*"]

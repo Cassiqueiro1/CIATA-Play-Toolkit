@@ -1,0 +1,4 @@
+package: br.org.ciata.comunicaciata
+default_track: beta
+language: pt-BR
+review_url: https://ciata.org.br/comunica/play-review

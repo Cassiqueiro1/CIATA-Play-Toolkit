@@ -1,0 +1,23 @@
+name: Sugerir funcionalidade
+description: Proponha uma melhoria para o toolkit
+title: "[Recurso] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necessidade
+      description: Qual dificuldade esta funcionalidade resolveria?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solução proposta
+    validations:
+      required: true
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Impacto de acessibilidade
+      description: Como a proposta deve funcionar com teclado e leitores de tela?
