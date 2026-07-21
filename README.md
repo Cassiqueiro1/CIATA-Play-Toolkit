@@ -2,7 +2,7 @@
 
 Toolkit de linha de comando acessível para preparar, validar e publicar aplicativos Android na Google Play sem depender da navegação visual no Play Console.
 
-Versão atual: **1.2.0**.
+Versão atual: **1.3.1**.
 
 ## Propósito
 
@@ -20,7 +20,8 @@ O projeto foi criado para permitir que uma pessoa cega ou com baixa visão execu
 - site, e-mail, telefone e idioma padrão;
 - manifesto TXT e JSON com hashes SHA-256;
 - validação, descarte e confirmação explícita de edição;
-- saída textual linear e JSON para automações.
+- saída textual linear e JSON para automações;
+- assistente acessível de primeira publicação com retomada, simulação e criação controlada de rascunho completo.
 
 ## Princípios de acessibilidade e segurança
 
@@ -34,9 +35,9 @@ O projeto foi criado para permitir que uma pessoa cega ou com baixa visão execu
 
 Leia também:
 
-- [Arquitetura](docs/ARCHITECTURE.md)
-- [Diretrizes de acessibilidade](docs/ACCESSIBILITY.md)
-- [Especificação do tutorial](docs/TUTORIAL_SPEC.md)
+- [Arquitetura](doc/ARCHITECTURE.md)
+- [Diretrizes de acessibilidade](doc/ACCESSIBILITY.md)
+- [Especificação do tutorial](doc/TUTORIAL_SPEC.md)
 - [Roadmap](ROADMAP.md)
 - [Como contribuir](CONTRIBUTING.md)
 
@@ -55,6 +56,36 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
 ```
+
+## Assistente acessível
+
+Inicie o fluxo guiado:
+
+```powershell
+playtool tutorial
+```
+
+Simule todas as etapas sem alterações remotas:
+
+```powershell
+playtool tutorial --dry-run
+```
+
+Crie e preencha uma edição temporária na Google Play:
+
+```powershell
+playtool tutorial --execute
+```
+
+O modo `--execute` pode enviar o AAB, mapping, símbolos, textos, contatos e imagens. Ao final, a edição é validada, mas não é confirmada. A publicação continua dependendo do comando separado `playtool play commit`.
+
+Retome uma sessão interrompida:
+
+```powershell
+playtool tutorial --resume
+```
+
+A interação usa frases lineares, etapas numeradas e confirmações como `S para sim` e `N para não`. Não há barras gráficas, arte ASCII ou separadores decorativos.
 
 ## Configuração inicial
 
@@ -161,7 +192,7 @@ playtool play commit
 
 ```powershell
 python -m pip install -r requirements-dev.txt
-pytest -q
+python -m pytest -q
 ```
 
 ## Estado do projeto

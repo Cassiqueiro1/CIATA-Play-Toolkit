@@ -42,3 +42,12 @@ Este roadmap descreve a direção do projeto. Datas não são promessas e podem 
 - Amazon Appstore;
 - Microsoft Store;
 - App Store Connect.
+
+## Próxima fase arquitetural
+
+- Introduzir `PublishingContext` sem quebrar os comandos atuais.
+- Extrair componentes reutilizáveis de perguntas e mensagens.
+- Implementar `playtool doctor`.
+- Implementar `playtool learn`.
+- Evoluir o tutorial para etapas declarativas.
+- Preparar a API interna de plugins.

@@ -8,6 +8,7 @@ from .release import inspect_release
 from .manifest import build_manifest
 from .googleplay import prepare, validate, commit, discard, remote_inventory
 from .listing import (list_images, replace_images, get_listing_text, update_listing_text, get_app_details, update_app_details)
+from .tutorial import run_tutorial, DEFAULT_TUTORIAL_STATE
 
 DEFAULT_CONFIG=Path('playtool.yaml'); DEFAULT_STATE=Path('.playtool-edit.json')
 def emit(data, json_mode=False):
@@ -59,10 +60,16 @@ def cmd_listing_details_show(a):
 def cmd_listing_details_update(a):
     c=load_config(Path(a.config)); s=_state(a.state); emit(update_app_details(c['package'],s['edit_id'],a.default_language or c['language'],a.website,a.email,a.phone or ''),a.json)
 
+def cmd_tutorial(a):
+    result = run_tutorial(resume=a.resume, dry_run=a.dry_run, execute_remote=a.execute, json_mode=a.json, state_path=Path(a.state), config_path=Path(a.config))
+    if a.json:
+        emit(result, True)
+
 def build_parser():
     p=argparse.ArgumentParser(prog='playtool',description='CIATA Play Publisher Toolkit, interface textual acessível.'); p.add_argument('--version',action='version',version=__version__)
     sp=p.add_subparsers(dest='command',required=True)
     x=sp.add_parser('init'); x.add_argument('--config',default=str(DEFAULT_CONFIG)); x.add_argument('--force',action='store_true'); x.set_defaults(func=cmd_init)
+    x=sp.add_parser('tutorial',help='Assistente acessível de primeira publicação'); x.add_argument('--config',default=str(DEFAULT_CONFIG)); x.add_argument('--state',default=str(DEFAULT_TUTORIAL_STATE)); x.add_argument('--resume',action='store_true'); x.add_argument('--dry-run',action='store_true'); x.add_argument('--execute',action='store_true',help='Cria e preenche uma edição temporária; não publica'); x.add_argument('--json',action='store_true'); x.set_defaults(func=cmd_tutorial)
     assets=sp.add_parser('assets'); asp=assets.add_subparsers(dest='assets_command',required=True)
     x=asp.add_parser('convert'); x.add_argument('--input',required=True); x.add_argument('--output',required=True); x.add_argument('--preset',choices=PRESETS,required=True); x.add_argument('--mode',choices=['contain','cover','stretch'],default='contain'); x.add_argument('--quality',type=int,default=92); x.add_argument('--background',default='white'); x.add_argument('--json',action='store_true'); x.set_defaults(func=cmd_assets_convert)
     x=asp.add_parser('validate'); x.add_argument('--input',required=True); x.add_argument('--kind',choices=['icon','feature','screenshot'],required=True); x.add_argument('--json',action='store_true'); x.set_defaults(func=cmd_assets_validate)
