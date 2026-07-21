@@ -91,3 +91,24 @@ def test_remote_draft_flow_never_commits(tmp_path: Path, monkeypatch):
     assert state.edit_id == 'edit-1'
     assert calls == ['text', 'details', 'validate']
     assert 'commit' not in calls
+
+
+def test_tutorial_uses_declarative_steps():
+    from playtool.tutorial import TUTORIAL_STEPS
+    assert len(TUTORIAL_STEPS) == 15
+    assert TUTORIAL_STEPS[0].id == 'verify-python'
+    assert TUTORIAL_STEPS[-1].id == 'validate-draft'
+    assert len({step.id for step in TUTORIAL_STEPS}) == len(TUTORIAL_STEPS)
+
+
+def test_persisted_state_does_not_expose_credentials(tmp_path: Path):
+    import json
+    credentials = tmp_path / 'service.json'
+    credentials.write_text('{}', encoding='utf-8')
+    state = TutorialState(credentials_path=str(credentials), dry_run=True)
+    runner = TutorialRunner(state, tmp_path / 'state.json', TutorialIO(output_fn=lambda _: None), json_mode=True)
+    runner.persist(1)
+    saved = json.loads((tmp_path / 'state.json').read_text(encoding='utf-8'))
+    assert saved['credentials_path'] is None
+    assert saved['context']['credentials_configured'] is True
+    assert str(credentials) not in (tmp_path / 'state.json').read_text(encoding='utf-8')

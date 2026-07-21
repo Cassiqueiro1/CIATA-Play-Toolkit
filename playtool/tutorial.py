@@ -4,11 +4,12 @@ import json
 import os
 import platform
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from .assets import validate_kind
+from .context import PublishingContext
 from .core import ToolError, load_config, save_json
 from .googleplay import prepare, remote_inventory, validate
 from .listing import replace_images, update_app_details, update_listing_text, validate_listing_text
@@ -49,6 +50,13 @@ class TutorialState:
     version_code: int | None = None
     dry_run: bool = False
     execute_remote: bool = False
+    completed_step_ids: list[str] = field(default_factory=list)
+    context: dict | None = None
+
+    def to_persisted_dict(self) -> dict:
+        data = asdict(self)
+        data['credentials_path'] = None
+        return data
 
     @classmethod
     def from_file(cls, path: Path) -> 'TutorialState':
@@ -84,8 +92,40 @@ class TutorialIO:
             self.say('Resposta não reconhecida. Digite S para sim ou N para não.')
 
 
+@dataclass(frozen=True)
+class TutorialStep:
+    id: str
+    title: str
+    handler: str
+    required: bool = True
+    can_skip: bool = False
+    resume: bool = True
+    interactive: bool = False
+    dependencies: tuple[str, ...] = ()
+    learn_topic: str | None = None
+
+
+TUTORIAL_STEPS: tuple[TutorialStep, ...] = (
+    TutorialStep('verify-python', 'ambiente Python', 'step_environment'),
+    TutorialStep('load-config', 'configuração', 'step_config', interactive=True),
+    TutorialStep('confirm-defaults', 'aplicativo e faixa', 'step_defaults', dependencies=('load-config',)),
+    TutorialStep('credentials', 'credenciais', 'step_credentials', required=False, can_skip=True, interactive=True),
+    TutorialStep('api-access', 'acesso à API', 'step_api_access', required=False, can_skip=True, dependencies=('credentials',)),
+    TutorialStep('app-bundle', 'App Bundle', 'step_aab', required=False, can_skip=True, interactive=True, learn_topic='bundle'),
+    TutorialStep('release-identity', 'identificação da versão', 'step_release_identity', interactive=True, dependencies=('load-config',)),
+    TutorialStep('debug-artifacts', 'artefatos de depuração', 'step_artifacts', required=False, can_skip=True, interactive=True, learn_topic='mapping'),
+    TutorialStep('listing-images', 'imagens da ficha', 'step_images', required=False, can_skip=True, interactive=True, learn_topic='screenshots'),
+    TutorialStep('listing-text', 'textos da ficha', 'step_listing_text', required=False, can_skip=True, interactive=True),
+    TutorialStep('support-contacts', 'contatos da ficha', 'step_contacts', required=False, can_skip=True, interactive=True),
+    TutorialStep('release-manifest', 'manifesto da versão', 'step_manifest', required=False, can_skip=True, dependencies=('app-bundle', 'release-identity')),
+    TutorialStep('summary', 'resumo', 'step_summary'),
+    TutorialStep('draft', 'criação e preenchimento do rascunho', 'step_draft', required=False, can_skip=True, interactive=True, dependencies=('summary',)),
+    TutorialStep('validate-draft', 'validação e publicação', 'step_publish', required=False, can_skip=True, dependencies=('draft',)),
+)
+
+
 class TutorialRunner:
-    total_steps = 15
+    total_steps = len(TUTORIAL_STEPS)
 
     def __init__(self, state: TutorialState, state_path: Path, io: TutorialIO, json_mode: bool = False):
         self.state = state
@@ -93,10 +133,43 @@ class TutorialRunner:
         self.io = io
         self.json_mode = json_mode
         self.events: list[dict] = []
+        self.context = self._build_context()
+
+    def _build_context(self) -> PublishingContext:
+        if self.state.context:
+            context = PublishingContext.from_public_dict(self.state.context)
+        else:
+            context = PublishingContext(
+                config_path=self.state.config_path, package=self.state.package, track=self.state.track, language=self.state.language,
+                aab_path=self.state.aab_path, mapping_path=self.state.mapping_path, symbols_path=self.state.symbols_path,
+                release_name=self.state.release_name, release_notes=self.state.release_notes, version_code=self.state.version_code,
+                icon_path=self.state.icon_path, feature_path=self.state.feature_path, screenshot_paths=self.state.screenshot_paths or [],
+                title_file=self.state.title_file, short_file=self.state.short_file, full_file=self.state.full_file,
+                video_url=self.state.video_url, website=self.state.website, support_email=self.state.support_email,
+                support_phone=self.state.support_phone, manifest_dir=self.state.manifest_dir, play_state_path=self.state.play_state_path,
+                edit_id=self.state.edit_id,
+            )
+        context.set_credentials_path(self.state.credentials_path or os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'), 'runtime')
+        return context
+
+    def _sync_context(self) -> None:
+        for name in (
+            'config_path', 'package', 'track', 'language', 'aab_path', 'mapping_path', 'symbols_path',
+            'release_name', 'release_notes', 'version_code', 'icon_path', 'feature_path', 'title_file',
+            'short_file', 'full_file', 'video_url', 'website', 'support_email', 'support_phone',
+            'manifest_dir', 'play_state_path', 'edit_id'
+        ):
+            setattr(self.context, name, getattr(self.state, name))
+        self.context.screenshot_paths = list(self.state.screenshot_paths or [])
+        self.context.set_credentials_path(self.state.credentials_path, 'runtime')
+        self.context.normalize_paths()
+        self.state.context = self.context.to_public_dict()
 
     def event(self, step: int, title: str, status: str, message: str) -> None:
         item = {'step': step, 'total_steps': self.total_steps, 'title': title, 'status': status, 'message': message}
         self.events.append(item)
+        step_id = TUTORIAL_STEPS[step - 1].id if 1 <= step <= len(TUTORIAL_STEPS) else str(step)
+        self.context.record_validation(step_id, status, message)
         if not self.json_mode:
             self.io.say(f"Etapa {step} de {self.total_steps}: {title}.")
             self.io.say(message)
@@ -105,7 +178,8 @@ class TutorialRunner:
 
     def persist(self, next_step: int) -> None:
         self.state.current_step = next_step
-        save_json(self.state_path, asdict(self.state))
+        self._sync_context()
+        save_json(self.state_path, self.state.to_persisted_dict())
 
     def run(self) -> dict:
         if not self.json_mode:
@@ -120,32 +194,22 @@ class TutorialRunner:
             self.io.say('Digite sair em qualquer pergunta para interromper. O progresso será salvo.')
             self.io.say()
 
-        steps = [
-            self.step_environment,
-            self.step_config,
-            self.step_defaults,
-            self.step_credentials,
-            self.step_api_access,
-            self.step_aab,
-            self.step_release_identity,
-            self.step_artifacts,
-            self.step_images,
-            self.step_listing_text,
-            self.step_contacts,
-            self.step_manifest,
-            self.step_summary,
-            self.step_draft,
-            self.step_publish,
-        ]
         start = max(1, self.state.current_step)
-        for index, step in enumerate(steps, start=1):
-            if index < start:
+        for index, definition in enumerate(TUTORIAL_STEPS, start=1):
+            if index < start and definition.id in self.state.completed_step_ids:
                 continue
-            step()
+            unmet = [item for item in definition.dependencies if item not in self.state.completed_step_ids]
+            if unmet and index >= start:
+                raise ToolError(f"A etapa {definition.id} depende de etapas não concluídas: {', '.join(unmet)}.")
+            handler = getattr(self, definition.handler)
+            handler()
+            if definition.resume and definition.id not in self.state.completed_step_ids:
+                self.state.completed_step_ids.append(definition.id)
             self.persist(index + 1)
         self.state.completed = True
         self.persist(self.total_steps + 1)
-        return {'completed': True, 'dry_run': self.state.dry_run, 'execute_remote': self.state.execute_remote, 'state': asdict(self.state), 'events': self.events}
+        self._sync_context()
+        return {'completed': True, 'dry_run': self.state.dry_run, 'execute_remote': self.state.execute_remote, 'state': self.state.to_persisted_dict(), 'context': self.context.to_public_dict(), 'events': self.events}
 
     def step_environment(self) -> None:
         version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -299,6 +363,7 @@ class TutorialRunner:
                 Path(self.state.symbols_path) if self.state.symbols_path else None,
                 self.state.release_notes, Path(self.state.manifest_dir),
             )
+            self.context.manifest = result
             self.event(12, 'manifesto da versão', 'gerado', f"Manifesto textual: {result['text']}. Manifesto JSON: {result['json']}.")
         else:
             self.event(12, 'manifesto da versão', 'aviso', 'Ainda faltam dados para gerar o manifesto da versão.')
@@ -379,6 +444,13 @@ def run_tutorial(*, resume: bool, dry_run: bool, execute_remote: bool, json_mode
         state = TutorialState.from_file(state_path)
         state.dry_run = dry_run or state.dry_run
         state.execute_remote = execute_remote or state.execute_remote
+        if state.context:
+            resumed_context = PublishingContext.from_public_dict(state.context)
+            invalidated = resumed_context.invalidate_missing_files()
+            state.context = resumed_context.to_public_dict()
+            if invalidated:
+                state.completed_step_ids = []
+                state.current_step = 1
     else:
         state = TutorialState(config_path=str(config_path), dry_run=dry_run, execute_remote=execute_remote)
     runner = TutorialRunner(state, state_path, TutorialIO(), json_mode=json_mode)

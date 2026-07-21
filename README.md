@@ -202,3 +202,16 @@ O toolkit está em desenvolvimento ativo. Antes de usar em uma conta de produç�
 ## Licença
 
 Distribuído sob a licença MIT. Consulte [LICENSE](LICENSE).
+
+
+## Arquitetura 1.4
+
+A versão 1.4 introduz o `PublishingContext`, que concentra os dados da publicação, registra a origem dos valores e mantém resultados de validação reutilizáveis. O tutorial usa um catálogo declarativo de 15 etapas, com identificadores estáveis, dependências e retomada segura.
+
+A saída JSON do tutorial inclui uma seção `context` sem credenciais ou outros segredos:
+
+```powershell
+playtool tutorial --dry-run --json
+```
+
+Ao retomar, referências locais são verificadas novamente. Arquivos removidos ou movidos invalidam as etapas relacionadas, evitando que um estado antigo seja tratado como válido.
