@@ -1,0 +1,22 @@
+package: br.org.ciata.comunicaciata
+default_track: beta
+language: pt-BR
+review_url: https://ciata.org.br/comunica/play-review
+
+aab_path: "D:/Desenvolvimento/Android/Comunica-CIATA/app/build/outputs/bundle/release/app-release.aab"
+mapping_path: "D:/Desenvolvimento/Android/Comunica-CIATA/app/build/outputs/mapping/release/mapping.txt"
+symbols_path: "D:/Desenvolvimento/Android/Comunica-CIATA/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip"
+
+title_file: "assets/play/pt-BR/titulo.txt"
+short_file: "assets/play/pt-BR/resumo.txt"
+full_file: "assets/play/pt-BR/descricao.txt"
+
+icon_path: "assets/play/icon.png"
+feature_path: "assets/play/feature.png"
+
+screenshot_paths:
+  - "assets/play/screenshots/01-conversas.png"
+  - "assets/play/screenshots/02-mensagens.png"
+
+website: https://ciata.org.br
+support_email: contato@ciata.org.br
