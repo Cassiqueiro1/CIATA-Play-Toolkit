@@ -264,26 +264,23 @@ def prepare(
         raise
 
 
-def validate(package: str, edit_id: str) -> None:
-    service().edits().validate(
-        packageName=package,
-        editId=edit_id,
-    ).execute()
-
-
-def commit(
+def validate(
     package: str,
     edit_id: str,
     *,
     changes_not_sent_for_review: bool = True,
-) -> dict:
+) -> None:
+    service().edits().validate(
+        packageName=package,
+        editId=edit_id,
+        changesNotSentForReview=changes_not_sent_for_review,
+    ).execute()
+
+
+def commit(package: str, edit_id: str) -> dict:
     return (
         service()
         .edits()
-        .commit(
-            packageName=package,
-            editId=edit_id,
-            changesNotSentForReview=changes_not_sent_for_review,
-        )
+        .commit(packageName=package, editId=edit_id)
         .execute()
     )

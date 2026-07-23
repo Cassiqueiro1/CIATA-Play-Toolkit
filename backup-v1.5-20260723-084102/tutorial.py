@@ -1127,17 +1127,17 @@ class TutorialRunner:
             )
             return
 
+        validate(
+            self.state.package or '',
+            self.state.edit_id,
+        )
         self.event(
             15,
             'validação e publicação',
-            'rascunho pronto',
-            f'A edição {self.state.edit_id} foi criada e preenchida. '
-            'A validação separada foi ignorada porque esta conta exige '
-            'changesNotSentForReview no momento do commit, e esse parâmetro '
-            'não pertence ao método validate. Nada foi publicado. '
-            'Execute playtool play commit para confirmar a edição sem '
-            'enviá-la automaticamente para revisão; depois, envie para '
-            'revisão pela Play Console.',
+            'validado',
+            f'A edição {self.state.edit_id} foi validada pela Google Play. '
+            'Nada foi publicado. Revise o resumo e execute '
+            'playtool play commit para confirmar separadamente.',
         )
 
 

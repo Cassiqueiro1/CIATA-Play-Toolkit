@@ -1127,17 +1127,43 @@ class TutorialRunner:
             )
             return
 
+        try:
+            validate(
+                self.state.package or '',
+                self.state.edit_id,
+                changes_not_sent_for_review=True,
+            )
+        except Exception as exc:
+            if isinstance(exc, ToolError):
+                raise
+
+            try:
+                from googleapiclient.errors import HttpError
+            except ImportError:
+                HttpError = ()  # type: ignore[assignment]
+
+            if HttpError and isinstance(exc, HttpError):
+                status = getattr(exc.resp, 'status', 'desconhecido')
+                raise ToolError(
+                    'A Google Play recusou a validação da edição. '
+                    f'HTTP {status}. O rascunho continua salvo e nada foi '
+                    f'publicado. Detalhe: {exc._get_reason()}'
+                ) from exc
+
+            raise ToolError(
+                'Falha ao validar a edição. O rascunho continua salvo e '
+                'nada foi publicado. '
+                f'Detalhe técnico: {type(exc).__name__}: {exc}'
+            ) from exc
+
         self.event(
             15,
             'validação e publicação',
-            'rascunho pronto',
-            f'A edição {self.state.edit_id} foi criada e preenchida. '
-            'A validação separada foi ignorada porque esta conta exige '
-            'changesNotSentForReview no momento do commit, e esse parâmetro '
-            'não pertence ao método validate. Nada foi publicado. '
-            'Execute playtool play commit para confirmar a edição sem '
-            'enviá-la automaticamente para revisão; depois, envie para '
-            'revisão pela Play Console.',
+            'validado',
+            f'A edição {self.state.edit_id} foi validada pela Google Play '
+            'com changesNotSentForReview=true. Nada foi publicado. '
+            'Revise o resumo e execute playtool play commit para confirmar '
+            'separadamente; depois, envie para revisão pela Play Console.',
         )
 
 
