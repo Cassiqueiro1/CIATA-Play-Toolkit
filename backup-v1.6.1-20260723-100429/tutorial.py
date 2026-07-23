@@ -19,7 +19,6 @@ from .listing import (
     validate_listing_text,
 )
 from .manifest import build_manifest
-from .progress import AccessibleProgress
 from .release import inspect_release
 
 DEFAULT_TUTORIAL_STATE = Path('.playtool-tutorial.json')
@@ -1001,12 +1000,6 @@ class TutorialRunner:
 
         play_state = Path(self.state.play_state_path)
         edit_id: str | None = None
-        progress = AccessibleProgress(
-            output=self.io.say,
-            enabled=not self.json_mode,
-            percent_step=10,
-            heartbeat_seconds=15,
-        )
 
         try:
             result = prepare(
@@ -1027,71 +1020,57 @@ class TutorialRunner:
                     if self.state.symbols_path
                     else None
                 ),
-                progress=progress,
             )
 
             edit_id = str(result['edit_id'])
             self.state.edit_id = edit_id
             self.state.version_code = int(result['version_code'])
 
-            progress.phase(7, 11, 'Atualizando textos da ficha')
-            with progress.waiting('Atualização dos textos da ficha'):
-                update_listing_text(
-                    self.state.package or '',
-                    edit_id,
-                    self.state.language or 'pt-BR',
-                    title_file=Path(self.state.title_file or ''),
-                    short_file=Path(self.state.short_file or ''),
-                    full_file=Path(self.state.full_file or ''),
-                    video=self.state.video_url,
-                )
-
-            progress.phase(8, 11, 'Atualizando contatos da ficha')
-            with progress.waiting('Atualização dos contatos da ficha'):
-                update_app_details(
-                    self.state.package or '',
-                    edit_id,
-                    self.state.language or 'pt-BR',
-                    self.state.website or '',
-                    self.state.support_email or '',
-                    self.state.support_phone or '',
-                )
+            update_listing_text(
+                self.state.package or '',
+                edit_id,
+                self.state.language or 'pt-BR',
+                title_file=Path(self.state.title_file or ''),
+                short_file=Path(self.state.short_file or ''),
+                full_file=Path(self.state.full_file or ''),
+                video=self.state.video_url,
+            )
+            update_app_details(
+                self.state.package or '',
+                edit_id,
+                self.state.language or 'pt-BR',
+                self.state.website or '',
+                self.state.support_email or '',
+                self.state.support_phone or '',
+            )
 
             if self.state.icon_path:
-                progress.phase(9, 11, 'Enviando ícone')
-                with progress.waiting('Envio do ícone'):
-                    replace_images(
-                        self.state.package or '',
-                        edit_id,
-                        self.state.language or 'pt-BR',
-                        'icon',
-                        [Path(self.state.icon_path)],
-                    )
-
+                replace_images(
+                    self.state.package or '',
+                    edit_id,
+                    self.state.language or 'pt-BR',
+                    'icon',
+                    [Path(self.state.icon_path)],
+                )
             if self.state.feature_path:
-                progress.phase(10, 11, 'Enviando recurso gráfico')
-                with progress.waiting('Envio do recurso gráfico'):
-                    replace_images(
-                        self.state.package or '',
-                        edit_id,
-                        self.state.language or 'pt-BR',
-                        'feature',
-                        [Path(self.state.feature_path)],
-                    )
-
+                replace_images(
+                    self.state.package or '',
+                    edit_id,
+                    self.state.language or 'pt-BR',
+                    'feature',
+                    [Path(self.state.feature_path)],
+                )
             if self.state.screenshot_paths:
-                progress.phase(11, 11, 'Enviando capturas de tela')
-                with progress.waiting('Envio das capturas de tela'):
-                    replace_images(
-                        self.state.package or '',
-                        edit_id,
-                        self.state.language or 'pt-BR',
-                        'screenshot',
-                        [
-                            Path(path)
-                            for path in self.state.screenshot_paths
-                        ],
-                    )
+                replace_images(
+                    self.state.package or '',
+                    edit_id,
+                    self.state.language or 'pt-BR',
+                    'screenshot',
+                    [
+                        Path(path)
+                        for path in self.state.screenshot_paths
+                    ],
+                )
 
         except Exception as exc:
             if edit_id:
@@ -1128,7 +1107,6 @@ class TutorialRunner:
                 f'Detalhe técnico: {type(exc).__name__}: {exc}'
             ) from exc
 
-        progress.summary('Criação e preenchimento do rascunho')
         self.event(
             14,
             'criação e preenchimento do rascunho',

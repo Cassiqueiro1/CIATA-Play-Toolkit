@@ -4,8 +4,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .progress import AccessibleProgress
-
 from .core import ToolError, save_json
 
 SCOPE = 'https://www.googleapis.com/auth/androidpublisher'
@@ -123,7 +121,6 @@ def prepare(
     state_path: Path,
     mapping: Path | None = None,
     symbols: Path | None = None,
-    progress: AccessibleProgress | None = None,
 ) -> dict:
     from googleapiclient.http import MediaFileUpload
 
@@ -134,15 +131,11 @@ def prepare(
         if optional is not None and not optional.is_file():
             raise ToolError(f'Artefato não encontrado: {optional}')
 
-    reporter = progress or AccessibleProgress(enabled=False)
     svc = service()
-
-    reporter.phase(1, 6, 'Criando edição temporária')
-    with reporter.waiting('Criação da edição temporária'):
-        edit = svc.edits().insert(
-            packageName=package,
-            body={},
-        ).execute()
+    edit = svc.edits().insert(
+        packageName=package,
+        body={},
+    ).execute()
     edit_id = str(edit['id'])
 
     try:
@@ -159,41 +152,20 @@ def prepare(
             if 'versionCode' in bundle
         }
 
-        reporter.phase(2, 6, 'Enviando App Bundle')
-        total_bytes = aab.stat().st_size
-        media = MediaFileUpload(
-            str(aab),
-            mimetype='application/octet-stream',
-            resumable=True,
-        )
-        request = (
+        bundle = (
             svc.edits()
             .bundles()
             .upload(
                 packageName=package,
                 editId=edit_id,
-                media_body=media,
+                media_body=MediaFileUpload(
+                    str(aab),
+                    mimetype='application/octet-stream',
+                    resumable=True,
+                ),
             )
+            .execute()
         )
-
-        bundle = None
-        while bundle is None:
-            status, bundle = request.next_chunk()
-            if status is not None:
-                fraction = status.progress()
-                reporter.progress(
-                    'App Bundle',
-                    fraction,
-                    completed_bytes=int(total_bytes * fraction),
-                    total_bytes=total_bytes,
-                )
-        reporter.progress(
-            'App Bundle',
-            1.0,
-            completed_bytes=total_bytes,
-            total_bytes=total_bytes,
-        )
-        reporter.done('Envio do App Bundle')
 
         version_code = int(bundle['versionCode'])
         if version_code in used_codes:
@@ -203,46 +175,41 @@ def prepare(
             )
 
         if mapping:
-            reporter.phase(3, 6, 'Enviando mapping de ofuscação')
-            with reporter.waiting('Envio do mapping'):
-                (
-                    svc.edits()
-                    .deobfuscationfiles()
-                    .upload(
-                        packageName=package,
-                        editId=edit_id,
-                        apkVersionCode=version_code,
-                        deobfuscationFileType='proguard',
-                        media_body=MediaFileUpload(
-                            str(mapping),
-                            mimetype='application/octet-stream',
-                            resumable=False,
-                        ),
-                    )
-                    .execute()
+            (
+                svc.edits()
+                .deobfuscationfiles()
+                .upload(
+                    packageName=package,
+                    editId=edit_id,
+                    apkVersionCode=version_code,
+                    deobfuscationFileType='proguard',
+                    media_body=MediaFileUpload(
+                        str(mapping),
+                        mimetype='application/octet-stream',
+                        resumable=False,
+                    ),
                 )
+                .execute()
+            )
 
         if symbols:
-            reporter.phase(4, 6, 'Enviando símbolos nativos')
-            with reporter.waiting('Envio dos símbolos nativos'):
-                (
-                    svc.edits()
-                    .deobfuscationfiles()
-                    .upload(
-                        packageName=package,
-                        editId=edit_id,
-                        apkVersionCode=version_code,
-                        deobfuscationFileType='nativeCode',
-                        media_body=MediaFileUpload(
-                            str(symbols),
-                            mimetype='application/octet-stream',
-                            resumable=False,
-                        ),
-                    )
-                    .execute()
+            (
+                svc.edits()
+                .deobfuscationfiles()
+                .upload(
+                    packageName=package,
+                    editId=edit_id,
+                    apkVersionCode=version_code,
+                    deobfuscationFileType='nativeCode',
+                    media_body=MediaFileUpload(
+                        str(symbols),
+                        mimetype='application/octet-stream',
+                        resumable=False,
+                    ),
                 )
+                .execute()
+            )
 
-        reporter.phase(5, 6, 'Configurando a faixa de publicação')
         body = {
             'track': track,
             'releases': [
@@ -259,18 +226,18 @@ def prepare(
                 }
             ],
         }
-        with reporter.waiting('Atualização da faixa'):
-            track_result = (
-                svc.edits()
-                .tracks()
-                .update(
-                    packageName=package,
-                    editId=edit_id,
-                    track=track,
-                    body=body,
-                )
-                .execute()
+
+        track_result = (
+            svc.edits()
+            .tracks()
+            .update(
+                packageName=package,
+                editId=edit_id,
+                track=track,
+                body=body,
             )
+            .execute()
+        )
 
         state = {
             'package': package,
@@ -283,10 +250,7 @@ def prepare(
             'bundle': bundle,
             'track_result': track_result,
         }
-
-        reporter.phase(6, 6, 'Salvando estado local')
         save_json(state_path, state)
-        reporter.done('Salvamento do estado local')
         return state
 
     except Exception:
